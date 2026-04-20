@@ -27,7 +27,6 @@ function NotFoundPage() {
                 </div>
             </section>
 
-            {/* Helpful Suggestion Section */}
             <section className="border-y-2 border-zinc-900 bg-zinc-100 px-4 py-8 sm:px-6 lg:px-8">
                 <div className="mx-auto max-w-3xl text-center">
                     <p className="text-sm text-zinc-500 italic">
