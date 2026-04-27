@@ -13,7 +13,7 @@ const SignInPage = () => {
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    navigate("/");
+    navigate("/dashboard");
   };
 
   return (
