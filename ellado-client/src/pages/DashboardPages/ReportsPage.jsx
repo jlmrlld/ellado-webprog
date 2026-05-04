@@ -1,111 +1,363 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import Paper from '@mui/material/Paper';
-import Typography from '@mui/material/Typography';
-import Divider from '@mui/material/Divider';
-import { BarChart } from '@mui/x-charts/BarChart';
-import { LineChart } from '@mui/x-charts/LineChart';
-import { PieChart } from '@mui/x-charts/PieChart';
+import { useRef } from 'react';
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Card from "@mui/material/Card";
+import CardContent from "@mui/material/CardContent";
+import Stack from "@mui/material/Stack";
+import Typography from "@mui/material/Typography";
+import { BarChart } from "@mui/x-charts/BarChart";
+import { Gauge } from "@mui/x-charts/Gauge";
+import { PieChart } from "@mui/x-charts/PieChart";
+import { DataGrid } from '@mui/x-data-grid';
 
-function ReportsPage() {
+const columns = [
+  { field: 'id', headerName: 'ID', width: 90 },
+  {
+    field: 'firstName',
+    headerName: 'First name',
+    width: 150,
+    editable: true,
+  },
+  {
+    field: 'lastName',
+    headerName: 'Last name',
+    width: 150,
+    editable: true,
+  },
+  {
+    field: 'age',
+    headerName: 'Age',
+    type: 'number',
+    width: 110,
+    editable: true,
+  },
+  {
+    field: 'fullName',
+    headerName: 'Full name',
+    description: 'This column has a value getter and is not sortable.',
+    sortable: false,
+    width: 160,
+    valueGetter: (value, row) => `${row.firstName || ''} ${row.lastName || ''}`,
+  },
+];
+
+const rows = [
+  { id: 1, lastName: 'Snow', firstName: 'Jon', age: 14 },
+  { id: 2, lastName: 'Lannister', firstName: 'Cersei', age: 31 },
+  { id: 3, lastName: 'Lannister', firstName: 'Jaime', age: 31 },
+  { id: 4, lastName: 'Stark', firstName: 'Arya', age: 11 },
+  { id: 5, lastName: 'Targaryen', firstName: 'Daenerys', age: null },
+  { id: 6, lastName: 'Melisandre', firstName: null, age: 150 },
+  { id: 7, lastName: 'Clifford', firstName: 'Ferrara', age: 44 },
+  { id: 8, lastName: 'Frances', firstName: 'Rossini', age: 36 },
+  { id: 9, lastName: 'Roxie', firstName: 'Harvey', age: 65 },
+];
+
+const ReportsPage = () => {
+  const printRef = useRef(null);
+  
+  // Enhancement 1: Create and design a your printing pdf based on you Laboratory 5 ReportsPage design
+  const handlePrint = () => {
+    const printContent = printRef.current;
+    if (!printContent) return;
+
+    const printWindow = window.open("", "_blank", "width=1200,height=900");
+    if (!printWindow) return;
+
+    const headMarkup = Array.from(
+      document.querySelectorAll('style, link[rel="stylesheet"]')
+    )
+      .map((node) => node.outerHTML)
+      .join('');
+
+    const exportedAt = new Intl.DateTimeFormat("en-US", {
+      dateStyle: 'long',
+      timeStyle: 'short',
+    }).format(new Date());
+
+    const BRAND_COLOR = "#B0C4DE";
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <title>Traverse Report Export</title>
+        ${headMarkup}
+        <style>
+          @page { 
+            size: A4; 
+            margin: 15mm; 
+          }
+          body { 
+            margin: 0; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: #fff; 
+            color: #333; 
+          }
+          .report-shell { 
+            padding: 10px; 
+          }
+          
+          .report-header { 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px; 
+            padding: 20px; 
+            background-color: ${BRAND_COLOR};
+            border-radius: 8px;
+            color: #000;
+          }
+          .report-header h1 { 
+            margin: 0; 
+            font-size: 28px; 
+            font-weight: 900; 
+            letter-spacing: 2px;
+          }
+          .report-header p {
+            margin: 0;
+            font-size: 12px;
+            font-weight: 600;
+            opacity: 0.8;
+          }
+          .meta-info {
+            text-align: right;
+            font-size: 12px;
+          }
+
+          .report-content h6 {
+            color: #1a2a3a;
+            border-left: 4px solid ${BRAND_COLOR};
+            padding-left: 10px;
+            margin-bottom: 15px;
+            font-weight: 700;
+          }
+
+          .report-content .MuiCard-root { 
+            box-shadow: none !important; 
+            border: 1px solid #e0e0e0 !important; 
+            margin-bottom: 20px;
+            break-inside: avoid; 
+          }
+
+          * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          
+          .report-footer {
+            margin-top: 40px;
+            padding-top: 15px;
+            border-top: 1px solid ${BRAND_COLOR};
+            text-align: center;
+            font-size: 11px;
+            color: #777;
+          }
+        </style>
+      </head>
+      <body>
+        <main class="report-shell">
+          <header class="report-header">
+            <div>
+              <h1>TRAVERSE</h1>
+              <p>EXPLORE THE WORLD WITH ME</p>
+            </div>
+            <div class="meta-info">
+              <strong>OFFICIAL ANALYTICS REPORT</strong><br>
+              Prepared on: ${exportedAt}
+            </div>
+          </header>
+          
+          <section class="report-content">
+            ${printContent.innerHTML}
+          </section>
+
+          <footer class="report-footer">
+            Generated via Traverse Dashboard • Confidential & Proprietary
+          </footer>
+        </main>
+      </body>
+      </html>
+    `);
+
+    setTimeout(() => {
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
+    }, 800);
+  };
+
   return (
-    <Box sx={{ minHeight: '100vh', p: 1 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1f1f1f' }}>
-          Reports
-        </Typography>
+    <Box>
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        justifyContent="space-between"
+        alignItems={{ xs: "flex-start", md: "center" }}
+        spacing={2}
+        sx={{ mb: 4 }}
+      >
+        <Box>
+          <Typography variant="h4" gutterBottom> 
+            Reports
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            Report analytics overview showing generated reports, 
+            category breakdown, and current completion performance.
+          </Typography>
+        </Box>
 
-        <Typography variant="body1" sx={{ color: '#555', mt: 1 }}>
-          This page presents charts and data visualizations to help users analyze trends and summary data.
-        </Typography>
-      </Box>
+        <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+          <Button variant="contained">Generate</Button>
+          <Button variant="outlined" onClick={handlePrint}>Export</Button>
+          <Button variant="outlined">Filter</Button>
+        </Stack>
+      </Stack>
 
-      <Stack spacing={3}>
-        <Paper
+      <Stack ref={printRef} spacing={3}>
+        <Card 
           sx={{
-            p: 3,
+            flex: 1,
             borderRadius: 3,
             border: '1px solid #e0e0e0',
             boxShadow: 'none',
             backgroundColor: '#fff',
           }}
         >
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Quarterly Performance Report
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <BarChart
-            xAxis={[{ scaleType: 'band', data: ['Q1', 'Q2', 'Q3', 'Q4'] }]}
-            series={[
-              { data: [35, 44, 24, 34], label: 'Series 1' },
-              { data: [51, 6, 49, 30], label: 'Series 2' },
-            ]}
-            height={300}
-          />
-        </Paper>
-
-        <Paper
-          sx={{
-            p: 3,
-            borderRadius: 3,
-            border: '1px solid #e0e0e0',
-            boxShadow: 'none',
-            backgroundColor: '#fff',
-          }}
-        >
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Monthly Trend Analysis
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <LineChart
-            xAxis={[
-              {
-                scaleType: 'point',
-                data: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-              },
-            ]}
-            series={[
-              { data: [10, 20, 15, 30, 25, 40], label: 'Users' },
-              { data: [5, 15, 10, 20, 18, 28], label: 'Activity' },
-            ]}
-            height={300}
-          />
-        </Paper>
-
-        <Paper
-          sx={{
-            p: 3,
-            borderRadius: 3,
-            border: '1px solid #e0e0e0',
-            boxShadow: 'none',
-            backgroundColor: '#fff',
-          }}
-        >
-          <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-            Category Distribution
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-            <PieChart
+          <CardContent>
+            <Typography variant="h6" gutterBottom> 
+              Monthly Report Output 
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+              This chart compares how many reports were generated and how many were completed across the last four months.
+            </Typography>
+            <BarChart
               series={[
+                { data: [18, 24, 28, 27], label: 'Generated' },
+                { data: [12, 19, 17, 23], label: 'Completed' },
+              ]}
+              height={300}
+              xAxis={[
                 {
-                  data: [
-                    { id: 0, value: 10, label: 'Category A' },
-                    { id: 1, value: 15, label: 'Category B' },
-                    { id: 2, value: 20, label: 'Category C' },
-                    { id: 3, value: 25, label: 'Category D' },
-                  ],
+                  data: ["January", "February", "March", "April"],
+                  scaleType: "band",
+                  label: "Month",
                 },
               ]}
-              width={400}
-              height={250}
             />
-          </Box>
-        </Paper>
+          </CardContent>
+        </Card>
+
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={3}>
+          <Card
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              border: '1px solid #e0e0e0',
+              boxShadow: 'none',
+              backgroundColor: '#fff',
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6" gutterBottom> 
+                Report Category Share 
+              </Typography>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ mb: 3 }}
+              >
+                This chart shows the distribution of report requests by
+                category for the current reporting period.
+              </Typography>
+              <Box sx={{ display: "flex", justifyContent: "center" }}>
+                <PieChart
+                  series={[
+                    {
+                      data: [
+                        { id: 0, value: 14, label: 'Sales' },
+                        { id: 1, value: 10, label: 'Users' },
+                        { id: 2, value: 8, label: 'Inventory' },
+                        { id: 3, value: 6, label: 'Finance' },
+                      ],
+                    },
+                  ]}
+                  width={280}
+                  height={220}
+                />
+              </Box>
+            </CardContent>
+          </Card>
+
+          <Card 
+            sx={{
+              flex: 1,
+              borderRadius: 3,
+              border: '1px solid #e0e0e0',
+              boxShadow: 'none',
+              backgroundColor: '#fff',
+            }}
+          >
+            <CardContent>
+              <Typography variant="h6" gutterBottom> 
+                Completion Rate 
+              </Typography>
+              <Typography 
+                variant="body2" 
+                color="text.secondary" 
+                sx={{ mb: 3 }}
+              >
+                The gauge highlights the current percentage of reports 
+                completed on time based on the latest reporting cycle.
+              </Typography>
+              <Box 
+                sx={{ 
+                  minHeight: 228, 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center" 
+                }}
+              >
+                <Gauge width={180} height={180} value={78} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Stack>
+
+        <Card
+          sx={{
+            flex: 1,
+            borderRadius: 3,
+            border: '1px solid #e0e0e0',
+            boxShadow: 'none',
+            backgroundColor: '#fff',
+          }}
+        >
+          <CardContent>
+            <DataGrid
+              sx={{
+                flex: 1,
+                borderRadius: 3,
+                border: '1px solid #e0e0e0',
+                boxShadow: 'none',
+                backgroundColor: '#fff',
+              }}
+              rows={rows}
+              columns={columns}
+              experimentalFeatures={{ newEditApi: true }}
+              initialState={{
+                pagination: {
+                  paginationModel: { 
+                    pageSize: 5 
+                  },
+                },
+              }}
+              pageSizeOptions={[5]}
+              checkboxSelection
+              disableRowSelectionOnClick
+            />
+          </CardContent>
+        </Card>
       </Stack>
     </Box>
   );
-}
+};
 
 export default ReportsPage;

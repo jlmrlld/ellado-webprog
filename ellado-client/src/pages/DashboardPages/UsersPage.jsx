@@ -1,91 +1,396 @@
-import React from 'react';
-import Box from '@mui/material/Box';
-import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
-import Divider from '@mui/material/Divider';
+import { useState, useMemo } from 'react';
+import {
+    Alert,
+    Box,
+    Button,
+    Chip,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    FormControlLabel,
+    IconButton,
+    InputAdornment,
+    MenuItem,
+    Paper,
+    Stack,
+    Switch,
+    TextField,
+    Typography,
+    useMediaQuery,
+} from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import Visibility from '@mui/icons-material/Visibility';
+import VisibilityOff from '@mui/icons-material/VisibilityOff';
+import SearchIcon from '@mui/icons-material/Search';
 import { DataGrid } from '@mui/x-data-grid';
+import usersSeed from '../../data/users.json?raw';
 
-const columns = [
-  { field: 'id', headerName: 'ID', width: 90 },
-  { field: 'firstName', headerName: 'First Name', width: 150, editable: true },
-  { field: 'lastName', headerName: 'Last Name', width: 150, editable: true },
-  { field: 'age', headerName: 'Age', type: 'number', width: 110, editable: true },
-  { field: 'email', headerName: 'Email', width: 220, editable: true },
-  { field: 'role', headerName: 'Role', width: 150, editable: true },
-  {
-    field: 'fullName',
-    headerName: 'Full Name',
-    sortable: false,
-    width: 180,
-    valueGetter: (value, row) => `${row.firstName || ''} ${row.lastName || ''}`,
-  },
-];
+const roles = ['admin', 'editor', 'viewer'];
+const genders = ['male', 'female', 'other'];
 
-const rows = [
-  { id: 1, firstName: 'Jon', lastName: 'Snow', age: 35, email: 'jon@example.com', role: 'Admin' },
-  { id: 2, firstName: 'Cersei', lastName: 'Lannister', age: 42, email: 'cersei@example.com', role: 'Manager' },
-  { id: 3, firstName: 'Jaime', lastName: 'Lannister', age: 45, email: 'jaime@example.com', role: 'Editor' },
-  { id: 4, firstName: 'Arya', lastName: 'Stark', age: 16, email: 'arya@example.com', role: 'User' },
-  { id: 5, firstName: 'Daenerys', lastName: 'Targaryen', age: 28, email: 'daenerys@example.com', role: 'Admin' },
-  { id: 6, firstName: 'Tyrion', lastName: 'Lannister', age: 39, email: 'tyrion@example.com', role: 'User' },
-  { id: 7, firstName: 'Sansa', lastName: 'Stark', age: 24, email: 'sansa@example.com', role: 'Manager' },
-  { id: 8, firstName: 'Bran', lastName: 'Stark', age: 18, email: 'bran@example.com', role: 'User' },
-  { id: 9, firstName: 'Robb', lastName: 'Stark', age: 27, email: 'robb@example.com', role: 'Editor' },
-];
+const blankForm = {
+    firstName: '',
+    lastName: '',
+    age: '',
+    gender: '',
+    contactNumber: '',
+    email: '',
+    role: 'editor',
+    username: '',
+    password: '',
+    address: '',
+    isActive: true,
+};
 
-function UsersPage() {
+const labelize = (value) =>
+    value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : '';
+
+const loadUsers = () => {
+    try {
+        return {
+            users: JSON.parse(usersSeed).map((user, index) => ({
+                id: Number(user.id) || index + 1,
+                firstName: String(user.firstName ?? '').trim(),
+                lastName: String(user.lastName ?? '').trim(),
+                age: String(user.age ?? '').trim(),
+                gender: genders.includes(String(user.gender ?? '').trim().toLowerCase())
+                    ? String(user.gender ?? '').trim().toLowerCase()
+                    : '',
+                contactNumber: String(user.contactNumber ?? '').trim(),
+                email: String(user.email ?? '').trim().toLowerCase(),
+                role: roles.includes(String(user.role ?? '').trim().toLowerCase())
+                    ? String(user.role ?? '').trim().toLowerCase()
+                    : 'editor',
+                username: String(user.username ?? '').trim().toLowerCase(),
+                password: String(user.password ?? ''),
+                address: String(user.address ?? '').trim(),
+                isActive: typeof user.isActive === 'boolean' ? user.isActive : true,
+            })),
+            error: '',
+        };
+    } catch {
+        return {
+            users: [],
+            error: 'Unable to read users data.',
+        };
+    }
+};
+
+const seed = loadUsers();
+
+const UsersPage = () => {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const [users, setUsers] = useState(seed.users);
+
+    // Enhancement 2: Create and design a search and filter.
+    const [searchQuery, setSearchQuery] = useState('');
+    const [filterRole, setFilterRole] = useState('all');
+    const [filterGender, setFilterGender] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('all');
+
+    const [modal, setModal] = useState({ open: false, id: null });
+    const [form, setForm] = useState(blankForm);
+    const [errors, setErrors] = useState({});
+    const [showPassword, setShowPassword] = useState(false);
+
+    const filteredUsers = useMemo(() => {
+        return users.filter((user) => {
+            const searchLower = searchQuery.toLowerCase();
+            const matchesSearch = 
+                user.firstName.toLowerCase().includes(searchLower) ||
+                user.lastName.toLowerCase().includes(searchLower) ||
+                user.email.toLowerCase().includes(searchLower) ||
+                user.username.toLowerCase().includes(searchLower);
+            
+            const matchesRole = filterRole === 'all' || user.role === filterRole;
+            const matchesGender = filterGender === 'all' || user.gender === filterGender;
+            const matchesStatus = filterStatus === 'all' || 
+                (filterStatus === 'active' ? user.isActive : !user.isActive);
+
+            return matchesSearch && matchesRole && matchesGender && matchesStatus;
+        });
+    }, [users, searchQuery, filterRole, filterGender, filterStatus]);
+
+    const resetForm = () => {
+        setForm({ ...blankForm });
+        setErrors({});
+    };
+
+    const openModal = (user) => {
+        setModal({ open: true, id: user?.id ?? null });
+        setForm(user ? { ...blankForm, ...user } : { ...blankForm });
+        setErrors({});
+    };
+
+    const closeModal = () => {
+        setModal({ open: false, id: null });
+        setShowPassword(false);
+        resetForm();
+    };
+
+    const handleChange = ({ target: { name, value, checked, type } }) => {
+        setForm((prev) => ({
+            ...prev,
+            [name]: type === 'checkbox' ? checked : value,
+        }));
+        if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    };
+
+    // Enhancement 3: Improve form validation with beginner-friendly rules
+    const validate = () => {
+      const nextErrors = {};
+      const email = form.email.trim().toLowerCase();
+      const username = form.username.trim();
+
+      [
+          ['firstName', 'First name'], 
+          ['lastName', 'Last name'], 
+          ['age', 'Age'], 
+          ['gender', 'Gender'], 
+          ['contactNumber', 'Contact number'], 
+          ['email', 'Email'], 
+          ['role', 'Role'], 
+          ['username', 'Username'], 
+          ['password', 'Password'], 
+          ['address', 'Address']
+      ].forEach(([key, label]) => {
+          if (!String(form[key]).trim()) {
+              nextErrors[key] = `${label} is required.`;
+          }
+      });
+
+      if (!nextErrors.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+          nextErrors.email = 'Enter a valid email address.';
+      }
+
+      if (!nextErrors.password && form.password.length < 8) {
+          nextErrors.password = 'Password must be at least 8 characters long.';
+      }
+
+      if (!nextErrors.contactNumber && !/^\d{11}$/.test(form.contactNumber.trim())) {
+          nextErrors.contactNumber = 'Contact number must be exactly 11 digits.';
+      }
+
+      const ageValue = form.age.trim();
+      if (!nextErrors.age && (isNaN(ageValue) || !Number.isInteger(Number(ageValue)))) {
+          nextErrors.age = 'Age must be a valid whole number.';
+      }
+
+      if (!nextErrors.username && /\s/.test(username)) {
+          nextErrors.username = 'Username cannot contain spaces.';
+      }
+
+      if (!nextErrors.email && users.some((user) => user.id !== modal.id && user.email === email)) {
+          nextErrors.email = 'Email address already exists.';
+      }
+
+      if (!nextErrors.username && users.some((user) => user.id !== modal.id && user.username === username.toLowerCase())) {
+          nextErrors.username = 'Username already exists.';
+      }
+
+      return nextErrors;
+  };
+
+  const handleSubmit = (event) => {
+      event.preventDefault();
+      const nextErrors = validate();
+      if (Object.keys(nextErrors).length) {
+          setErrors(nextErrors);
+          return;
+      }
+
+      const nextUser = {
+          ...form,
+          firstName: form.firstName.trim(),
+          lastName: form.lastName.trim(),
+          email: form.email.trim().toLowerCase(),
+          username: form.username.trim().toLowerCase(),
+      };
+
+      setUsers((prev) =>
+          modal.id
+              ? prev.map((user) => (user.id === modal.id ? { ...user, ...nextUser } : user))
+              : [...prev, { ...nextUser, id: prev.reduce((max, user) => Math.max(max, Number(user.id) || 0), 0) + 1 }]
+      );
+      closeModal();
+  };
+
+  const toggleStatus = (id) => {
+      setUsers((prev) => prev.map((user) => user.id === id ? { ...user, isActive: !user.isActive } : user));
+  };
+
+  const fieldProps = (name, label, extra = {}) => ({
+      name, label, value: form[name], onChange: handleChange,
+      error: Boolean(errors[name]), helperText: errors[name],
+      fullWidth: true, ...extra,
+  });
+
+  const columns = [
+      { field: 'id', headerName: 'ID', width: 60 },
+      { field: 'fullName', headerName: 'Full Name', flex: 1.5, minWidth: 150, valueGetter: (_, row) => `${row.firstName} ${row.lastName}`.trim() },
+      { field: 'username', headerName: 'Username', flex: 1, minWidth: 120 },
+      { field: 'age', headerName: 'Age', width: 60 },
+      { field: 'gender', headerName: 'Gender', width: 90, valueGetter: (_, row) => labelize(row.gender) },
+      { field: 'contactNumber', headerName: 'Contact', flex: 1, minWidth: 130 },
+      { field: 'email', headerName: 'Email', flex: 1.5, minWidth: 180 },
+      { field: 'role', headerName: 'Role', width: 100, valueGetter: (_, row) => labelize(row.role) },
+      { field: 'status', headerName: 'Status', width: 100, renderCell: ({ row }) => (
+          <Chip size="small" label={row.isActive ? 'Active' : 'Inactive'} color={row.isActive ? 'success' : 'default'} variant={row.isActive ? 'filled' : 'outlined'} />
+      )},
+      { field: 'actions', headerName: 'Actions', width: 180, renderCell: ({ row }) => (
+          <Stack direction="row" spacing={1} sx={{ py: 0.5 }}>
+              <Button size="small" variant="outlined" onClick={() => openModal(row)}>Edit</Button>
+              <Button size="small" variant="contained" color={row.isActive ? 'warning' : 'success'} onClick={() => toggleStatus(row.id)}>{row.isActive ? 'Disable' : 'Activate'}</Button>
+          </Stack>
+      )},
+  ];
+
   return (
-    <Box sx={{ minHeight: '100vh', p: 1 }}>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 700, color: '#1f1f1f' }}>
-          Users
-        </Typography>
+      <Box sx={{ width: '100%' }}>
+          <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+              <Typography variant="h4">Users</Typography>
+              <Button variant="contained" onClick={() => openModal()}>Add User</Button>
+          </Box>
 
-        <Typography variant="body1" sx={{ color: '#555', mt: 1 }}>
-          This page displays the list of users and their details in a table format.
-        </Typography>
+          <Paper 
+            sx=
+            {{ p: 2, mb: 3, 
+            borderRadius: 3, 
+            border: '1px solid #e0e0e0', 
+            boxShadow: 'none', 
+            backgroundColor: '#fff' 
+            }}
+          >
+              <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+                  <TextField
+                      fullWidth
+                      size="small"
+                      placeholder="Search name, email, or username..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      InputProps={{
+                          startAdornment: (
+                              <InputAdornment position="start">
+                                  <SearchIcon color="action" />
+                              </InputAdornment>
+                          ),
+                      }}
+                  />
+                  <Stack direction="row" spacing={1}>
+                      <TextField
+                          select
+                          size="small"
+                          label="Role"
+                          value={filterRole}
+                          onChange={(e) => setFilterRole(e.target.value)}
+                          sx={{ minWidth: 110 }}
+                      >
+                          <MenuItem value="all">All Roles</MenuItem>
+                          {roles.map(r => <MenuItem key={r} value={r}>{labelize(r)}</MenuItem>)}
+                      </TextField>
+                      <TextField
+                          select
+                          size="small"
+                          label="Gender"
+                          value={filterGender}
+                          onChange={(e) => setFilterGender(e.target.value)}
+                          sx={{ minWidth: 110 }}
+                      >
+                          <MenuItem value="all">All</MenuItem>
+                          {genders.map(g => <MenuItem key={g} value={g}>{labelize(g)}</MenuItem>)}
+                      </TextField>
+                      <TextField
+                          select
+                          size="small"
+                          label="Status"
+                          value={filterStatus}
+                          onChange={(e) => setFilterStatus(e.target.value)}
+                          sx={{ minWidth: 110 }}
+                      >
+                          <MenuItem value="all">All</MenuItem>
+                          <MenuItem value="active">Active</MenuItem>
+                          <MenuItem value="inactive">Inactive</MenuItem>
+                      </TextField>
+                  </Stack>
+              </Stack>
+          </Paper>
+
+          {seed.error && <Alert severity="error" sx={{ mb: 2 }}>{seed.error}</Alert>}
+
+          <Paper 
+          sx=
+            {{ p: 2, overflow: 'hidden', 
+              borderRadius: 3, 
+              border: '1px solid #e0e0e0', 
+              boxShadow: 'none', 
+              backgroundColor: '#fff' 
+            }}
+          >
+              {filteredUsers.length ? (
+                  <Box sx={{ height: 520, width: '100%' }}>
+                      <DataGrid
+                          rows={filteredUsers}
+                          columns={columns}
+                          disableRowSelectionOnClick
+                          pageSizeOptions={[5, 10]}
+                          initialState={{ pagination: { paginationModel: { pageSize: 5 } } }}
+                          sx={{ border: 'none' }}
+                      />
+                  </Box>
+              ) : (
+                  <Alert severity="info">No users match your filter criteria.</Alert>
+              )}
+          </Paper>
+
+          <Dialog open={modal.open} onClose={closeModal} fullWidth fullScreen={isMobile} maxWidth="md">
+              <Box component="form" onSubmit={handleSubmit}>
+                  <DialogTitle>{modal.id ? 'Edit User' : 'Add User'}</DialogTitle>
+                  <DialogContent dividers>
+                      <Stack spacing={2} sx={{ pt: 1 }}>
+                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                              <TextField {...fieldProps('firstName', 'First Name')} />
+                              <TextField {...fieldProps('lastName', 'Last Name')} />
+                          </Stack>
+                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                              <TextField {...fieldProps('age', 'Age')} />
+                              <TextField {...fieldProps('gender', 'Gender', { select: true })}>
+                                  {genders.map(g => <MenuItem key={g} value={g}>{labelize(g)}</MenuItem>)}
+                              </TextField>
+                          </Stack>
+                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                              <TextField {...fieldProps('contactNumber', 'Contact Number')} />
+                              <TextField {...fieldProps('email', 'Email Address', { type: 'email' })} />
+                          </Stack>
+                          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                              <TextField {...fieldProps('role', 'Role', { select: true })}>
+                                  {roles.map(r => <MenuItem key={r} value={r}>{labelize(r)}</MenuItem>)}
+                              </TextField>
+                              <TextField {...fieldProps('username', 'Username')} />
+                          </Stack>
+                          <TextField {...fieldProps('password', 'Password', {
+                              type: showPassword ? 'text' : 'password',
+                              slotProps: { input: { endAdornment: (
+                                  <InputAdornment position="end">
+                                      <IconButton edge="end" onClick={() => setShowPassword(!showPassword)} onMouseDown={e => e.preventDefault()}>
+                                          {showPassword ? <VisibilityOff /> : <Visibility />}
+                                      </IconButton>
+                                  </InputAdornment>
+                              )}}
+                          })} />
+                          <TextField {...fieldProps('address', 'Address', { multiline: true, rows: 3 })} />
+                          <FormControlLabel control={<Switch name="isActive" checked={form.isActive} onChange={handleChange} />} label={form.isActive ? 'Active' : 'Inactive'} />
+                      </Stack>
+                  </DialogContent>
+                  <DialogActions sx={{ p: 2 }}>
+                      <Button onClick={closeModal}>Cancel</Button>
+                      <Button type="submit" variant="contained">{modal.id ? 'Update' : 'Save'}</Button>
+                  </DialogActions>
+              </Box>
+          </Dialog>
       </Box>
-
-      <Paper
-        sx={{
-          p: 3,
-          borderRadius: 3,
-          border: '1px solid #e0e0e0',
-          boxShadow: 'none',
-          backgroundColor: '#fff',
-        }}
-      >
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-          Users List
-        </Typography>
-        <Divider sx={{ mb: 2 }} />
-
-        <Box sx={{ height: 450, width: '100%' }}>
-          <DataGrid
-            rows={rows}
-            columns={columns}
-            initialState={{
-              pagination: {
-                paginationModel: {
-                  pageSize: 5,
-                },
-              },
-            }}
-            pageSizeOptions={[5]}
-            checkboxSelection
-            disableRowSelectionOnClick
-            sx={{
-              border: 'none',
-              '& .MuiDataGrid-columnHeaders': {
-                backgroundColor: '#fafafa',
-                borderBottom: '1px solid #e0e0e0',
-              },
-            }}
-          />
-        </Box>
-      </Paper>
-    </Box>
-  );
-}
+    );
+};
 
 export default UsersPage;

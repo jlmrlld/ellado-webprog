@@ -44,9 +44,9 @@ const AppBar = styled(MuiAppBar, {
   shouldForwardProp: (prop) => prop !== "open",
 })(({ open }) => ({
   zIndex: 1201,
-  backgroundColor: "#B0C4DE", // clean white
+  backgroundColor: "#B0C4DE",
   color: "#000",
-  borderBottom: "1px solid #e0e0e0", // subtle line
+  borderBottom: "1px solid #e0e0e0",
   boxShadow: "none",
   ...(open && {
     marginLeft: drawerWidth,
@@ -63,7 +63,7 @@ const DrawerStyled = styled(Drawer, {
 
   "& .MuiDrawer-paper": {
     backgroundColor: "#fff",
-    borderRight: "1px solid #e0e0e0", // clean border
+    borderRight: "1px solid #e0e0e0", 
   },
 
   ...(open && {
