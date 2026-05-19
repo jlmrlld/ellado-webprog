@@ -1,6 +1,6 @@
-import { createBrowserRouter, RouterProvider } from 'react-router-dom';
+import { createBrowserRouter, RouterProvider, Navigate, Outlet } from 'react-router-dom';
 
-//HomePage Structure
+// HomePage Structure
 import Layout from './layouts/Layout';
 import ArticlePage from './pages/LandingPages/ArticlePage';
 import HomePage from './pages/LandingPages/HomePage';
@@ -18,6 +18,24 @@ import DashboardPage from './pages/DashboardPages/DashboardPage';
 import ReportsPage from './pages/DashboardPages/ReportsPage';
 import UsersPage from './pages/DashboardPages/UsersPage';
 
+import DashArticleListPage from './pages/DashboardPages/DashArticleListPage';
+
+// Must be logged in
+const RequireAuth = () => {
+  const token = localStorage.getItem("token");
+  return token ? <Outlet /> : <Navigate to="/auth/signin" replace />;
+};
+
+// Role-based access control
+const RequireRole = ({ allowedRoles }) => {
+  const type = localStorage.getItem("type");
+
+  if (!type) return <Navigate to="/auth/signin" replace />;
+  if (!allowedRoles.includes(type)) return <Navigate to="/dashboard" replace />;
+
+  return <Outlet />;
+};
+
 const routes = [
   {
     path: '/',
@@ -33,15 +51,16 @@ const routes = [
         element: <AboutPage />
       },
       {
-        path: '/articles',
-        element: <ArticleListPage />
-      },
-      {
-        path: '/articles/:name',
-        element: <ArticlePage />
-      },
+  path: '/articles',
+  element: <ArticleListPage />
+},
+{
+  path: '/articles/:slug',
+  element: <ArticlePage />
+},
     ],
   },
+
   {
     path: 'auth/',
     element: <AuthLayout />,
@@ -57,33 +76,45 @@ const routes = [
       }
     ],
   },
+
   {
-    path: 'dashboard/',
-    element: <DashLayout />,
-    errorElement: <NotFoundPage />,
-    children: [
-      {
-        path: '',
-        element: <DashboardPage />,
-      },
-      {
-        path: 'reports',
-        element: <ReportsPage />,
-      },
-      {
-        path: 'users',
-        element: <UsersPage />,
-      }
-    ],
-  },
+  path: 'dashboard',
+  element: <RequireAuth />,
+  children: [
+    {
+      element: <DashLayout />,
+      children: [
+        {
+          index: true,
+          element: <DashboardPage />,
+        },
+        {
+          path: 'reports',
+          element: <ReportsPage />,
+        },
+        {
+          path: 'articles',
+          element: <DashArticleListPage />,
+        },
+        {
+          element: <RequireRole allowedRoles={["admin"]} />,
+          children: [
+            {
+              path: 'users',
+              element: <UsersPage />,
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
 ];
 
 const router = createBrowserRouter(routes);
 
 function App() {
-  return (
-    <RouterProvider router={router} />
-  );
+  return <RouterProvider router={router} />;
 }
 
 export default App;

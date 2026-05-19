@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Button from "../../components/Button";
+import { loginUser } from "../../services/UserService";
 
 const inputClasses =
   "mt-2 w-full rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-900 outline-none transition-all placeholder:text-zinc-400 focus:border-[#B0C4DE] focus:bg-white focus:ring-4 focus:ring-[#B0C4DE]/20";
@@ -10,10 +12,49 @@ const actionButtonClassName =
 const SignInPage = () => {
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    navigate("/dashboard");
+    try {
+      setError("");
+
+      const { data } = await loginUser({
+        email,
+        password,
+      });
+
+      console.log("Login successful:", data);
+
+      // BLOCK VIEWERS
+      if (data.type === "viewer") {
+        setError("Viewers are not allowed to log in.");
+        return;
+      }
+
+      // save user info
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("firstName", data.firstName);
+      localStorage.setItem("type", data.type);
+
+      localStorage.setItem("user", JSON.stringify(data));
+
+      navigate("/dashboard");
+
+    } catch (err) {
+      console.error(
+        "Login failed:",
+        err.response?.data?.message || err.message
+      );
+
+      setError(
+        err.response?.data?.message ||
+        "Login failed. Please try again."
+      );
+    }
   };
 
   return (
@@ -22,14 +63,22 @@ const SignInPage = () => {
         <h1 className="text-3xl font-black tracking-tight text-zinc-900 sm:text-4xl">
           Welcome Back
         </h1>
+
         <p className="mt-3 text-sm leading-6 text-zinc-500">
           Enter your details to continue your journey.
         </p>
       </header>
 
+      {/* ERROR MESSAGE */}
+      {error && (
+        <div className="mt-4 rounded-lg bg-red-100 px-4 py-3 text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="mt-10 space-y-5">
-        
-        {/* Email Field */}
+
+        {/* EMAIL */}
         <div>
           <label
             htmlFor="signin-email"
@@ -37,17 +86,20 @@ const SignInPage = () => {
           >
             Email Address
           </label>
+
           <input
             id="signin-email"
             type="email"
             placeholder="name@example.com"
             autoComplete="email"
             className={inputClasses}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
 
-        {/* Password Field */}
+        {/* PASSWORD */}
         <div>
           <div className="flex items-center justify-between">
             <label
@@ -56,6 +108,7 @@ const SignInPage = () => {
             >
               Password
             </label>
+
             <a
               href="#"
               className="text-xs font-medium text-[#7A8DA3] transition hover:text-zinc-900"
@@ -63,17 +116,20 @@ const SignInPage = () => {
               Forgot password?
             </a>
           </div>
+
           <input
             id="signin-password"
             type="password"
             placeholder="••••••••"
             autoComplete="current-password"
             className={inputClasses}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             required
           />
         </div>
 
-        {/* SIGN IN BUTTON */}
+        {/* LOGIN BUTTON */}
         <Button
           type="submit"
           variant="primary"
@@ -82,10 +138,15 @@ const SignInPage = () => {
           Sign In
         </Button>
 
+        {/* DIVIDER */}
         <div className="relative py-4">
-          <div className="absolute inset-0 flex items-center" aria-hidden="true">
+          <div
+            className="absolute inset-0 flex items-center"
+            aria-hidden="true"
+          >
             <div className="w-full border-t border-zinc-200"></div>
           </div>
+
           <div className="relative flex justify-center text-[10px] uppercase tracking-widest">
             <span className="bg-white px-4 text-zinc-400">
               Or continue with
@@ -93,7 +154,7 @@ const SignInPage = () => {
           </div>
         </div>
 
-        {/* Social Buttons */}
+        {/* SOCIALS */}
         <div className="grid gap-3 sm:grid-cols-2">
           <Button
             variant="secondary"
@@ -101,6 +162,7 @@ const SignInPage = () => {
           >
             Google
           </Button>
+
           <Button
             variant="secondary"
             className={`${actionButtonClassName} border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 shadow-sm`}

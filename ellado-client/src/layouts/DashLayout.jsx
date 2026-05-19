@@ -20,15 +20,10 @@ import DashboardIcon from "@mui/icons-material/Dashboard";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import PeopleIcon from "@mui/icons-material/People";
 import Button from "@mui/material/Button";
+import ArticleIcon from "@mui/icons-material/Article";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 const drawerWidth = 240;
-
-const dashboardViews = [
-  { label: "Dashboard", to: "/dashboard", icon: <DashboardIcon /> },
-  { label: "Reports", to: "/dashboard/reports", icon: <BarChartIcon /> },
-  { label: "Users", to: "/dashboard/users", icon: <PeopleIcon /> },
-];
 
 const openedMixin = (theme) => ({
   width: drawerWidth,
@@ -63,7 +58,7 @@ const DrawerStyled = styled(Drawer, {
 
   "& .MuiDrawer-paper": {
     backgroundColor: "#fff",
-    borderRight: "1px solid #e0e0e0", 
+    borderRight: "1px solid #e0e0e0",
   },
 
   ...(open && {
@@ -102,6 +97,34 @@ const DashLayout = () => {
   const handleDrawerOpen = () => setOpen(true);
   const handleDrawerClose = () => setOpen(false);
   const handleLogout = () => navigate("/");
+
+  const userType = localStorage.getItem("type");
+
+  // MENU PERMISSIONS
+  const dashboardViews = [
+    { label: "Dashboard", to: "/dashboard", icon: <DashboardIcon /> },
+    { label: "Reports", to: "/dashboard/reports", icon: <BarChartIcon /> },
+
+    ...((userType === "admin" || userType === "editor")
+      ? [
+          {
+            label: "Articles",
+            to: "/dashboard/articles",
+            icon: <ArticleIcon  />,
+          }
+        ]
+      : []),
+
+    ...(userType === "admin"
+      ? [
+          {
+            label: "Users",
+            to: "/dashboard/users",
+            icon: <PeopleIcon />
+          }
+        ]
+      : []),
+  ];
 
   return (
     <Box sx={{ display: "flex", backgroundColor: "#fafafa", minHeight: "100vh" }}>
