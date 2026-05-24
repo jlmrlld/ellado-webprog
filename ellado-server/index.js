@@ -29,7 +29,7 @@ const corsOptions = {
   preflightContinue: false,
   optionsSuccessStatus: 204, // For legacy browser support
 };
-app.options("*", cors(corsOptions)); // Pre-flight request for all routes
+app.options(" ", cors(corsOptions)); // Pre-flight request for all routes
 app.use(cors(corsOptions));
 
 // Curb Cores Error by adding a header here
@@ -57,5 +57,5 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 module.exports = app;
